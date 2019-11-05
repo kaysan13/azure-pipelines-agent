@@ -8,17 +8,17 @@ NODE_VERSION="6.10.3"
 NODE10_VERSION="10.13.0"
 
 get_abs_path() {
-  # exploits the fact that pwd will print abs path when no args
-  echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+    # exploits the fact that pwd will print abs path when no args
+    echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
 LAYOUT_DIR=$(get_abs_path "$(dirname $0)/../../_layout")
 DOWNLOAD_DIR="$(get_abs_path "$(dirname $0)/../../_downloads")/netcore2x"
 
 function failed() {
-   local error=${1:-Undefined error}
-   echo "Failed: $error" >&2
-   exit 1
+    local error=${1:-Undefined error}
+    echo "Failed: $error" >&2
+    exit 1
 }
 
 function checkRC() {
@@ -32,18 +32,18 @@ function acquireExternalTool() {
     local download_source=$1 # E.g. https://vstsagenttools.blob.core.windows.net/tools/pdbstr/1/pdbstr.zip
     local target_dir="$LAYOUT_DIR/externals/$2" # E.g. $LAYOUT_DIR/externals/pdbstr
     local fix_nested_dir=$3 # Flag that indicates whether to move nested contents up one directory. E.g. TEE-CLC-14.0.4.zip
-                            # directly contains only a nested directory TEE-CLC-14.0.4. When this flag is set, the contents
-                            # of the nested TEE-CLC-14.0.4 directory are moved up one directory, and then the empty directory
-                            # TEE-CLC-14.0.4 is removed.
-
+    # directly contains only a nested directory TEE-CLC-14.0.4. When this flag is set, the contents
+    # of the nested TEE-CLC-14.0.4 directory are moved up one directory, and then the empty directory
+    # TEE-CLC-14.0.4 is removed.
+    
     # Extract the portion of the URL after the protocol. E.g. vstsagenttools.blob.core.windows.net/tools/pdbstr/1/pdbstr.zip
     local relative_url="${download_source#*://}"
-
+    
     # Check if the download already exists.
     local download_target="$DOWNLOAD_DIR/$relative_url"
     local download_basename="$(basename "$download_target")"
     local download_dir="$(dirname "$download_target")"
-
+    
     if [[ "$PRECACHE" != "" ]]; then
         if [ -f "$download_target" ]; then
             echo "Download exists: $download_basename"
@@ -54,7 +54,7 @@ function acquireExternalTool() {
             if [ -f "$partial_target" ]; then
                 rm "$partial_target" || checkRC 'rm'
             fi
-
+            
             # Download from source to the partial file.
             echo "Downloading $download_source"
             mkdir -p "$(dirname "$download_target")" || checkRC 'mkdir'
@@ -64,10 +64,10 @@ function acquireExternalTool() {
             #      -L Follow redirects (H)
             #      -o FILE    Write to FILE instead of stdout
             curl -fkSL -o "$partial_target" "$download_source" 2>"${download_target}_download.log" || checkRC 'curl'
-
+            
             # Move the partial file to the download target.
             mv "$partial_target" "$download_target" || checkRC 'mv'
-
+            
             # Extract to current directory
             # Ensure we can extract those files
             # We might use them during dev.sh
@@ -79,7 +79,7 @@ function acquireExternalTool() {
                 if [[ $rc -ne 0 && $rc -ne 1 ]]; then
                     failed "unzip failed with return code $rc"
                 fi
-            elif [[ "$download_basename" == *.tar.gz ]]; then
+                elif [[ "$download_basename" == *.tar.gz ]]; then
                 # Extract the tar gz.
                 echo "Testing tar gz"
                 tar xzf "$download_target" -C "$download_dir" > /dev/null || checkRC 'tar'
@@ -97,16 +97,16 @@ function acquireExternalTool() {
             if [[ $rc -ne 0 && $rc -ne 1 ]]; then
                 failed "unzip failed with return code $rc"
             fi
-
+            
             # Capture the nested directory path if the fix_nested_dir flag is set.
             if [[ "$fix_nested_dir" == "fix_nested_dir" ]]; then
                 nested_dir="${download_basename%.zip}" # Remove the trailing ".zip".
             fi
-        elif [[ "$download_basename" == *.tar.gz ]]; then
+            elif [[ "$download_basename" == *.tar.gz ]]; then
             # Extract the tar gz.
             echo "Extracting tar gz to layout"
             tar xzf "$download_target" -C "$target_dir" > /dev/null || checkRC 'tar'
-
+            
             # Capture the nested directory path if the fix_nested_dir flag is set.
             if [[ "$fix_nested_dir" == "fix_nested_dir" ]]; then
                 nested_dir="${download_basename%.tar.gz}" # Remove the trailing ".tar.gz".
@@ -116,7 +116,7 @@ function acquireExternalTool() {
             echo "Copying to layout"
             cp "$download_target" "$target_dir/" || checkRC 'cp'
         fi
-
+        
         # Fixup the nested directory.
         if [[ "$nested_dir" != "" ]]; then
             if [ -d "$target_dir/$nested_dir" ]; then
@@ -164,7 +164,8 @@ if [[ "$PACKAGERUNTIME" == "osx-x64" ]]; then
 fi
 
 # Download the external tools common across OSX and Linux PACKAGERUNTIMEs.
-if [[ "$PACKAGERUNTIME" == "linux-x64" || "$PACKAGERUNTIME" == "linux-arm" || "$PACKAGERUNTIME" == "osx-x64" || "$PACKAGERUNTIME" == "rhel.6-x64" ]]; then
+# if [[ "$PACKAGERUNTIME" == "linux-x64" || "$PACKAGERUNTIME" == "linux-arm" || "$PACKAGERUNTIME" == "osx-x64" || "$PACKAGERUNTIME" == "rhel.6-x64" ]]; then
+if [[ "$PACKAGERUNTIME" == "linux-x64" || "$PACKAGERUNTIME" == "linux-arm" || "$PACKAGERUNTIME" == "linux-arm64" || "$PACKAGERUNTIME" == "osx-x64" || "$PACKAGERUNTIME" == "rhel.6-x64" ]]; then
     acquireExternalTool "$CONTAINER_URL/tee/14_134_0/TEE-CLC-14.134.0.zip" tee fix_nested_dir
     acquireExternalTool "$CONTAINER_URL/vso-task-lib/0.5.5/vso-task-lib.tar.gz" vso-task-lib
 fi
@@ -177,5 +178,10 @@ fi
 
 if [[ "$PACKAGERUNTIME" == "linux-arm" ]]; then
     acquireExternalTool "$NODE_URL/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-armv7l.tar.gz" node fix_nested_dir
-    acquireExternalTool "$NODE_URL/v${NODE10_VERSION}/node-v${NODE10_VERSION}-linux-armv7l.tar.gz" node10 fix_nested_dir	
+    acquireExternalTool "$NODE_URL/v${NODE10_VERSION}/node-v${NODE10_VERSION}-linux-armv7l.tar.gz" node10 fix_nested_dir
+fi
+
+if [[ "$PACKAGERUNTIME" == "linux-arm64" ]]; then
+    acquireExternalTool "$NODE_URL/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.gz" node fix_nested_dir
+    acquireExternalTool "$NODE_URL/v${NODE10_VERSION}/node-v${NODE10_VERSION}-linux-arm64.tar.gz" node10 fix_nested_dir
 fi
